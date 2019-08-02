@@ -133,8 +133,8 @@ namespace WowHeadParser.Entities
 
                 try
                 {
-                    count = (float)Convert.ToDouble(gameobjectLootDatas[i].modes["4"]["count"]);
-                    outof = (float)Convert.ToDouble(gameobjectLootDatas[i].modes["4"]["outof"]);
+                    count = (float)Convert.ToDouble(gameobjectLootDatas[i].modes["1"]["count"]);
+                    outof = (float)Convert.ToDouble(gameobjectLootDatas[i].modes["1"]["outof"]);
                     percent = count * 100 / outof;
                 }
                 catch (Exception)
@@ -165,7 +165,7 @@ namespace WowHeadParser.Entities
                 {
                     currentItemParsing = (GameObjectLootItemParsing)gameobjectLootDatas[i];
                 }
-                catch (Exception ex) { }
+                catch { }
 
                 gameobjectLootDatas[i].questRequired = currentItemParsing != null && currentItemParsing.classs == 12 ? "1": "0";
 
@@ -226,7 +226,8 @@ namespace WowHeadParser.Entities
             if (IsCheckboxChecked("loot") && m_gameobjectLootDatas != null)
             {
                 m_gameobjectLootBuilder = new SqlBuilder("gameobject_loot_template", "entry", SqlQueryType.DeleteInsert);
-                m_gameobjectLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
+                //m_gameobjectLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
+                m_gameobjectLootBuilder.SetFieldsNames("item", "ChanceOrQuestChance", "lootmode", "groupid", "mincountOrRef", "maxcount", "requiredClass", "difficultyMask");
 
                 returnSql += "UPDATE gameobject_template SET data1 = " + m_data.id + " WHERE entry = " + m_data.id + " AND type IN (3, 50);\n";
                 foreach (GameObjectLootParsing gameobjectLootData in m_gameobjectLootDatas)
@@ -249,14 +250,15 @@ namespace WowHeadParser.Entities
 
                     m_gameobjectLootBuilder.AppendFieldsValue(  m_data.id, // Entry
                                                                 gameobjectLootData.id * idMultiplier, // Item
-                                                                0, // Reference
                                                                 gameobjectLootData.percent, // Chance
-                                                                gameobjectLootData.questRequired, // QuestRequired
                                                                 1, // LootMode
                                                                 0, // GroupId
                                                                 minLootCount, // MinCount
                                                                 maxLootCount, // MaxCount
-                                                                ""); // Comment
+                                                                0, // requiredClass
+                                                                0  // difficultyMask 
+                                                                   //gameobjectLootData.questRequired, // QuestRequired
+                                                                );
                 }
 
                 returnSql += m_gameobjectLootBuilder.ToString() + "\n";
