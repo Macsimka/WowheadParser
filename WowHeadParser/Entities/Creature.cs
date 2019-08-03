@@ -64,7 +64,6 @@ namespace WowHeadParser.Entities
         public int[] stack;
 
         public string percent;
-        public string questRequired;
         public string mode;
     }
 
@@ -153,8 +152,8 @@ namespace WowHeadParser.Entities
             String dataPattern = @"\$\.extend\(g_npcs\[" + m_creatureTemplateData.id + @"\], (.+)\);";
             String modelPattern = @"ModelViewer\.show\(\{ type: [0-9]+, typeId: " + m_creatureTemplateData.id + @", displayId: ([0-9]+)";
             String vendorPattern = @"new Listview\({template: 'item', id: 'sells', .+?, data: (.+)}\);";
-            String creatureHealthPattern = @"<div>(?:Health|Vie) : ((?:\d|,|\.)+)</div>";
-            String creatureLootPattern = @"new Listview\({template: 'item', id: 'drops', name: LANG\.tab_drops, tabs: tabsRelated, parent: 'lkljbjkb574', extraCols: \[Listview\.extraCols\.count, Listview\.extraCols\.percent(?:, Listview.extraCols.mode)?\],  showLootSpecs: [0-9],sort:\['-percent', 'name'\], _totalCount: [0-9]+, computeDataFunc: Listview\.funcBox\.initLootTable, onAfterCreate: Listview\.funcBox\.addModeIndicator, data: (.+)}\);";
+            String creatureHealthPattern = @"<div>Health: ((?:\d|,|\.)+)</div>";
+            String creatureLootPattern = @"new Listview\({template: 'item', id: 'drops', name: LANG\.tab_drops, tabs: tabsRelated, parent: 'lkljbjkb574', extraCols: \['count', 'percent', ""mode""\],  showLootSpecs: [0-9],sort:\['-percent', 'name'\], _totalCount: [0-9]+, computeDataFunc: Listview\.funcBox\.initLootTable, onAfterCreate: Listview\.funcBox\.addModeIndicator, data:(.+)}\);";
             String creatureCurrencyPattern = @"new Listview\({template: 'currency', id: 'drop-currency', name: LANG\.tab_currencies, tabs: tabsRelated, parent: 'lkljbjkb574', extraCols: \[Listview\.extraCols\.count, Listview\.extraCols\.percent\], sort:\['-percent', 'name'], _totalCount: [0-9]*, computeDataFunc: Listview\.funcBox\.initLootTable, onAfterCreate: Listview\.funcBox\.addModeIndicator, data: (.+)}\);";
             String creatureSkinningPattern = @"new Listview\(\{template: 'item', id: 'skinning', name: LANG\.tab_skinning, tabs: tabsRelated, parent: 'lkljbjkb574', extraCols: \[Listview\.extraCols\.count, Listview\.extraCols\.percent\], sort:\['-percent', 'name'\], computeDataFunc: Listview\.funcBox\.initLootTable, note: WH\.sprintf\(LANG\.lvnote_npcskinning, [0-9]+\), _totalCount: ([0-9]+), data: (.+)}\);";
             String creatureTrainerPattern = @"new Listview\(\{template: 'spell', id: 'teaches-recipe', name: LANG\.tab_teaches, tabs: tabsRelated, parent: 'lkljbjkb574', visibleCols: \['source'\], data: (.+)\}\);";
@@ -239,7 +238,7 @@ namespace WowHeadParser.Entities
             m_creatureTemplateData.maxGold = "0";
 
             decimal averageMoney = 0;
-            if (Decimal.TryParse(money, out averageMoney))
+            if (decimal.TryParse(money, out averageMoney))
             {
                 int roundNumber = Math.Min((int)Math.Pow(10.0, (double)(money.Length - 1)), 10000);
 
@@ -283,7 +282,7 @@ namespace WowHeadParser.Entities
 
                     npcVendorDatas[i].integerExtendedCost = (int)Tools.GetExtendedCostId(itemId, itemCount, currencyId, currencyCount);
                 }
-                catch (Exception ex)
+                catch
                 {
                     npcVendorDatas[i].integerCost = 0;
                     npcVendorDatas[i].integerExtendedCost = 0;
@@ -371,9 +370,12 @@ namespace WowHeadParser.Entities
                 {
                     currentItemParsing = (CreatureLootItemParsing)allLootData[i];
                 }
-                catch (Exception ex) { }
+                catch { }
 
-                allLootData[i].questRequired = (currentItemParsing != null && currentItemParsing.classs == 12) ? "1" : "0";
+                // Quest Required
+                if (currentItemParsing != null && currentItemParsing.classs == 12)
+                    percent = -percent;
+
                 allLootData[i].percent = Tools.NormalizeFloat(percent);
                 allLootData[i].mode = currentMode;
                 lootsData.Add(allLootData[i]);
@@ -498,16 +500,15 @@ namespace WowHeadParser.Entities
             if (IsCheckboxChecked("loot") && m_creatureLootDatas != null)
             {
                 bool referenceAdded = false;
-                int maxReferenceLoot = 2; // A voir si on peut trouver
 
                 int templateEntry = m_creatureTemplateData.id;
                 m_creatureLootBuilder = new SqlBuilder("creature_loot_template", "entry", SqlQueryType.DeleteInsert);
-                m_creatureLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
+                m_creatureLootBuilder.SetFieldsNames("item", "ChanceOrQuestChance", "lootmode", "groupid", "mincountOrRef", "maxcount");
 
                 m_creatureReferenceLootBuilder = new SqlBuilder("reference_loot_template", "entry", SqlQueryType.DeleteInsert);
-                m_creatureReferenceLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
+                m_creatureReferenceLootBuilder.SetFieldsNames("item", "ChanceOrQuestChance", "lootmode", "groupid", "mincountOrRef", "maxcount");
 
-                returnSql += "UPDATE creature_template SET lootid = " + templateEntry + " WHERE entry = " + templateEntry + " AND lootid = 0;\n";
+                returnSql += "UPDATE creature_template SET lootid = " + templateEntry + " WHERE entry = " + templateEntry + ";\n";
                 foreach (CreatureLootParsing creatureLootData in m_creatureLootDatas)
                 {
                     List<int> entryList = new List<int>();
@@ -517,14 +518,14 @@ namespace WowHeadParser.Entities
                     {
                         creatureLootItemData = (CreatureLootItemParsing)creatureLootData;
                     }
-                    catch (Exception ex) { }
+                    catch { }
 
                     CreatureLootCurrencyParsing creatureLootCurrencyData = null;
                     try
                     {
                         creatureLootCurrencyData = (CreatureLootCurrencyParsing)creatureLootData;
                     }
-                    catch (Exception ex) { }
+                    catch { }
 
                     int minLootCount = creatureLootData.stack.Length >= 1 ? creatureLootData.stack[0] : 1;
                     int maxLootCount = creatureLootData.stack.Length >= 2 ? creatureLootData.stack[1] : minLootCount;
@@ -546,16 +547,13 @@ namespace WowHeadParser.Entities
                             if (idMultiplier < 1)
                                 continue;
 
-                            m_creatureLootBuilder.AppendFieldsValue(entry, // Entry
-                                                                    creatureLootData.id * idMultiplier, // Item
-                                                                    0, // Reference
-                                                                    creatureLootData.percent, // Chance
-                                                                    creatureLootData.questRequired, // QuestRequired
-                                                                    1, // LootMode
-                                                                    0, // GroupId
-                                                                    minLootCount, // MinCount
-                                                                    maxLootCount, // MaxCount
-                                                                    ""); // Comment
+                            m_creatureLootBuilder.AppendFieldsValue(entry, // entry
+                                                                    creatureLootData.id * idMultiplier, // item
+                                                                    creatureLootData.percent, // ChanceOrQuestChance
+                                                                    1, // lootmode
+                                                                    0, // groupid
+                                                                    minLootCount, // mincountOrRef
+                                                                    maxLootCount);// maxcount
                         }
                     }
                     else
@@ -563,28 +561,22 @@ namespace WowHeadParser.Entities
                         if (!referenceAdded)
                         {
                             m_creatureLootBuilder.AppendFieldsValue(templateEntry, // Entry
-                                                                    0, // Item
-                                                                    templateEntry, // Reference
+                                                                    1, // item
                                                                     100, // Chance
-                                                                    0, // QuestRequired
                                                                     1, // LootMode
                                                                     0, // GroupId
-                                                                    maxReferenceLoot, // MinCount
-                                                                    maxReferenceLoot, // MaxCount
-                                                                    ""); // Comment
+                                                                    -templateEntry, // mincountOrRef
+                                                                    1);// MaxCount
                             referenceAdded = true;
                         }
 
                         m_creatureReferenceLootBuilder.AppendFieldsValue(templateEntry, // Entry
                                                                          creatureLootData.id, // Item
-                                                                         0, // Reference
                                                                          creatureLootData.percent, // Chance
-                                                                         creatureLootData.questRequired, // QuestRequired
                                                                          1, // LootMode
                                                                          1, // GroupId
                                                                          minLootCount, // MinCount
-                                                                         maxLootCount, // MaxCount
-                                                                         ""); // Comment
+                                                                         maxLootCount);// MaxCount
                     }
                 }
 
