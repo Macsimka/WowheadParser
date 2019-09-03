@@ -48,7 +48,7 @@ namespace WowHeadParser
             comboBoxLocale.Items.Add("pt");
             comboBoxLocale.Items.Add("ru");
             comboBoxLocale.Items.Add("ko");
-            comboBoxLocale.Items.Add("ch");
+            comboBoxLocale.Items.Add("cn");
 
             comboBoxChoice.SelectedIndex = 0;
 
