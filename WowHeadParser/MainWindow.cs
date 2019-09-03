@@ -82,7 +82,7 @@ namespace WowHeadParser
                 case "it":  Properties.Settings.Default.localIndex = (int)LocaleConstant.itIT;  break;
                 case "pt":  Properties.Settings.Default.localIndex = (int)LocaleConstant.ptPT;  break;
                 case "ko":  Properties.Settings.Default.localIndex = (int)LocaleConstant.koKR; break;
-                case "ch":  Properties.Settings.Default.localIndex = (int)LocaleConstant.zhCN; break;
+                case "cn":  Properties.Settings.Default.localIndex = (int)LocaleConstant.zhCN; break;
                 case "ru":  Properties.Settings.Default.localIndex = (int)LocaleConstant.ruRU;  break;
                 default:    Properties.Settings.Default.localIndex = (int)LocaleConstant.frFR;  break;
             }
