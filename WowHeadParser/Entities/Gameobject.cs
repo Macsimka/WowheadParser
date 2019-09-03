@@ -198,7 +198,7 @@ namespace WowHeadParser.Entities
         {
             String returnSql = "";
 
-            if (m_data.id == 0 || isError)
+            if (m_data.id == 0 || isError || string.IsNullOrEmpty(m_data.name))
                 return returnSql;
 
             if (IsCheckboxChecked("locale"))
